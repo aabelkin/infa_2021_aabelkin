@@ -8,15 +8,6 @@ FPS = 30
 screen = pygame.display.set_mode((400, 550))
 rect(screen, (255, 255, 255), (0, 0, 400, 550))
 
-def anglerect(x, y, a, b, angle):
-    x1 = x - a * math.sin(angle)
-    y1 = y - a * math.cos(angle)
-    x2 = x1 + b * math.cos(angle)
-    y2 = y1 - b * math.sin(angle)
-    x3 = x2 + a * math.sin(angle)
-    y3 = y2 + a * math.cos(angle)
-    polygon(screen, black, ((x, y), (x1, y1), (x2, y2), (x3, y3)))
-
 def draw_background():
     rect(screen, (184, 197, 201), (0, 0, 400, 345))
     rect(screen, (82, 108, 113), (0, 350, 400, 200))
