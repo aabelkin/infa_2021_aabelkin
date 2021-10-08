@@ -18,14 +18,10 @@ CYAN = (0, 255, 255)
 BLACK = (0, 0, 0)
 COLORS = [RED, BLUE, YELLOW, GREEN, MAGENTA, CYAN]
 score = 0
-x, y = 100, 100
-angle = 45
-speed = 10
-r = 30
 n_balls = 5
 balls = []
 
-for ball in range(n_balls):
+def create_ball(balls):
     x = randint(100, 1100)
     y = randint(100, 800)
     r = randint(10, 100)
@@ -34,19 +30,24 @@ for ball in range(n_balls):
     color = COLORS[randint(0, 5)]
     balls += [[x, y, r, angle, speed, color]]
 
-def new_ball():
-    global x, y, r
-    x = randint(100, 700)
-    y = randint(100, 500)
-    r = randint(30, 50)
-    color = COLORS[randint(0, 5)]
-    circle(screen, color, (x, y), r)
+for ball in range(n_balls):
+    create_ball(balls)
 
 def draw_ball(x, y, r, angle, speed, color):
     x += speed * math.cos(angle)
     y += speed * math.sin(angle)
     circle(screen, color, (x, y), r)
     return (x, y, r, angle)
+
+def x_reflection(x, r, angle):
+    if x - r <= 0 or x + r >= screen_width:
+        angle = math.pi - angle
+    return angle
+
+def y_reflection(y, r, angle):
+    if y - r <= 0 or y + r >= screen_height:
+        angle *= -1
+    return angle
 
 pygame.display.update()
 clock = pygame.time.Clock()
@@ -60,14 +61,16 @@ while not finished:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             x_mouse = event.pos[0]
             y_mouse = event.pos[1]
-            if (x - x_mouse) ** 2 + (y - y_mouse) ** 2 <= r ** 2:
-                score += 1
+            for i in range(n_balls):
+                x, y, r = balls[i][0:3]
+                if (x - x_mouse) ** 2 + (y - y_mouse) ** 2 <= r ** 2:
+                    score += 1
+                    balls.pop(i)
+                    create_ball(balls)
     for i in range(n_balls):
         x, y, r, angle = draw_ball(*balls[i])
-        if x - r <= 0 or x + r >= screen_width:
-            angle = math.pi - angle
-        if y - r <= 0 or y + r >= screen_height:
-            angle *= -1
+        angle = x_reflection(x, r, angle)
+        angle = y_reflection(y, r, angle)
         balls[i][0:4] = x, y, r, angle
     pygame.display.update()
     screen.fill(BLACK)
