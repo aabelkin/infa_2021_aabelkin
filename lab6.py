@@ -1,6 +1,6 @@
 import pygame
 from pygame.draw import *
-from random import randint
+from random import randint, random
 import math
 pygame.init()
 
@@ -29,7 +29,7 @@ for ball in range(n_balls):
     x = randint(100, 1100)
     y = randint(100, 800)
     r = randint(10, 100)
-    angle = randint(0, 360)
+    angle = random() * 2 * math.pi
     speed = randint(5, 10)
     color = COLORS[randint(0, 5)]
     balls += [[x, y, r, angle, speed, color]]
@@ -46,7 +46,7 @@ def draw_ball(x, y, r, angle, speed, color):
     x += speed * math.cos(angle)
     y += speed * math.sin(angle)
     circle(screen, color, (x, y), r)
-    return (x, y, r)
+    return (x, y, r, angle)
 
 pygame.display.update()
 clock = pygame.time.Clock()
@@ -63,12 +63,12 @@ while not finished:
             if (x - x_mouse) ** 2 + (y - y_mouse) ** 2 <= r ** 2:
                 score += 1
     for i in range(n_balls):
-        x, y, r = draw_ball(*balls[i])
-        balls[i][0:3] = x, y, r
+        x, y, r, angle = draw_ball(*balls[i])
         if x - r <= 0 or x + r >= screen_width:
-            pass
+            angle = math.pi - angle
         if y - r <= 0 or y + r >= screen_height:
-            pass
+            angle *= -1
+        balls[i][0:4] = x, y, r, angle
     pygame.display.update()
     screen.fill(BLACK)
 
