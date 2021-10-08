@@ -1,9 +1,10 @@
 import pygame
 from pygame.draw import *
 from random import randint
+import math
 pygame.init()
 
-FPS = 2
+FPS = 30
 screen = pygame.display.set_mode((1200, 900))
 
 RED = (255, 0, 0)
@@ -15,6 +16,10 @@ CYAN = (0, 255, 255)
 BLACK = (0, 0, 0)
 COLORS = [RED, BLUE, YELLOW, GREEN, MAGENTA, CYAN]
 score = 0
+x, y = 100, 100
+angle = 45
+speed = 10
+r = 30
 
 def new_ball():
     global x, y, r
@@ -24,8 +29,11 @@ def new_ball():
     color = COLORS[randint(0, 5)]
     circle(screen, color, (x, y), r)
 
-def click(event):
-    print(x, y, r)
+def draw_ball(x, y, angle, speed, color):
+    x += speed * math.cos(angle)
+    y += speed * math.sin(angle)
+    circle(screen, color, (x, y), r)
+    return (x, y)
 
 pygame.display.update()
 clock = pygame.time.Clock()
@@ -41,7 +49,7 @@ while not finished:
             y_mouse = event.pos[1]
             if (x - x_mouse) ** 2 + (y - y_mouse) ** 2 <= r ** 2:
                 score += 1
-    new_ball()
+    x, y = draw_ball(x, y, angle, speed, COLORS[0])
     pygame.display.update()
     screen.fill(BLACK)
 
