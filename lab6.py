@@ -20,6 +20,17 @@ x, y = 100, 100
 angle = 45
 speed = 10
 r = 30
+n_balls = 5
+balls = []
+
+for ball in range(n_balls):
+    x = randint(100, 1100)
+    y = randint(100, 800)
+    r = randint(10, 100)
+    angle = randint(0, 360)
+    speed = randint(5, 10)
+    color = COLORS[randint(0, 5)]
+    balls += [[x, y, angle, speed, color]]
 
 def new_ball():
     global x, y, r
@@ -49,7 +60,8 @@ while not finished:
             y_mouse = event.pos[1]
             if (x - x_mouse) ** 2 + (y - y_mouse) ** 2 <= r ** 2:
                 score += 1
-    x, y = draw_ball(x, y, angle, speed, COLORS[0])
+    for i in range(n_balls):
+        balls[i][0:2] = draw_ball(*balls[i])
     pygame.display.update()
     screen.fill(BLACK)
 
