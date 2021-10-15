@@ -22,10 +22,13 @@ COLORS = [RED, BLUE, YELLOW, GREEN, MAGENTA, CYAN]
 r_balls_min = 10
 r_balls_max = 100
 number_of_balls = 5
+target_width = 50
+target_speed = 15
 
 score = 0
 balls = []
-game_time = 60
+target = [0, 0]
+game_time = 20
 time = 0
 
 def create_ball(balls):
@@ -58,9 +61,21 @@ def y_reflection(y, r, angle):
 
 def information_display():
     score_display = FONT.render(str(score), True, (255, 255, 255))
-    screen.blit(score_display, (10, 30))
+    screen.blit(score_display, (10, 10))
     time_display = FONT.render(str(int(time)), True, (255, 255, 255))
-    screen.blit(time_display, (screen_width - 60, 30))
+    screen.blit(time_display, (screen_width - 60, 10))
+
+def draw_target(x, y):
+    y += target_speed
+    rect(screen, (255, 255, 255), (x, y, target_width, target_width))
+    return x, y
+
+def create_target(target):
+    target[0] = randint(0, screen_width - target_width)
+    target[1] = -target_width
+
+create_target(target)
+print(target)
 
 pygame.display.update()
 clock = pygame.time.Clock()
@@ -81,11 +96,21 @@ while not finished:
                     score += 1
                     balls.pop(i)
                     create_ball(balls)
+            target_x, target_y = target[0:2]
+            if target_x <= x_mouse <= target_x + target_width and \
+               target_y <= y_mouse <= target_y + target_width:
+                score += 10
+                create_target(target)
+    
     for i in range(number_of_balls):
         x, y, r, angle = draw_ball(*balls[i])
         angle = x_reflection(x, r, angle)
         angle = y_reflection(y, r, angle)
         balls[i][0:4] = x, y, r, angle
+    
+    target_x, target_y = draw_target(*target)
+    target[0:2] = target_x, target_y
+    
     information_display()
     pygame.display.update()
     screen.fill(BLACK)
