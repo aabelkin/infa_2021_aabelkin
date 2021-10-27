@@ -1,7 +1,8 @@
 import math
-import random
+from random import choice
 
 import pygame
+import math
 
 
 FPS = 30
@@ -35,7 +36,7 @@ class Ball:
         self.r = 10
         self.vx = 0
         self.vy = 0
-        self.color = random.choice(GAME_COLORS)
+        self.color = choice(GAME_COLORS)
         self.live = 30
 
     def move(self):
@@ -48,11 +49,6 @@ class Ball:
         # FIXME
         self.x += self.vx
         self.y -= self.vy
-        self.vy -= 1
-        if self.x >= WIDTH - self.r:
-            self.vx *= -1
-        if self.y >= HEIGHT * 5 / 6 - self.r:
-            self.vy *= -1
 
     def draw(self):
         pygame.draw.circle(
@@ -70,8 +66,7 @@ class Ball:
         Returns:
             Возвращает True в случае столкновения мяча и цели. В противном случае возвращает False.
         """
-        if (self.x - obj.x) ** 2 + (self.y - obj.y) ** 2 <= (self.r + obj.r) ** 2:
-            return True
+        # FIXME
         return False
 
 
@@ -82,12 +77,14 @@ class Gun:
         self.f2_on = 0
         self.an = 1
         self.color = GREY
+        self.length = 30
+        self.width = 10
 
     def fire2_start(self, event):
         self.f2_on = 1
 
     def fire2_end(self, event):
-        """Выстрел мячом.5
+        """Выстрел мячом.
 
         Происходит при отпускании кнопки мыши.
         Начальные значения компонент скорости мяча vx и vy зависят от положения мыши.
@@ -106,23 +103,21 @@ class Gun:
     def targetting(self, event):
         """Прицеливание. Зависит от положения мыши."""
         if event:
-            self.an = math.atan((450 - event.pos[1]) / (event.pos[0]-20))
+            self.an = math.atan((450 - event.pos[1]) / (event.pos[0] - 20)) if event.pos[0] - 20 != 0 else math.pi
         if self.f2_on:
             self.color = RED
         else:
             self.color = GREY
 
     def draw(self):
-        # FIXIT don't know how to do it
-        pygame.draw.polygon(self.screen, self.color, ((20 - 5 * math.sin(self.an),
-                                                      450 - 5 * math.cos(self.an)),
-                                                      (20 + 5 * math.sin(self.an),
-                                                      450 + 5 * math.cos(self.an)),
-                                                      (20 + 5 * math.sin(self.an) + 30 * math.cos(self.an),
-                                                      450 + 5 * math.cos(self.an) - 30 * math.sin(self.an)),
-                                                      (20 - 5 * math.sin(self.an) + 30 * math.cos(self.an),
-                                                      450 - 5 * math.cos(self.an) - 30 * math.sin(self.an))))
-        
+        pygame.draw.polygon(self.screen, self.color, ((20 - self.width / 2 * math.sin(self.an),
+                                                      450 - self.width / 2 * math.cos(self.an)),
+                                                      (20 + self.width / 2 * math.sin(self.an),
+                                                      450 + self.width / 2 * math.cos(self.an)),
+                                                      (20 + self.width / 2 * math.sin(self.an) + (self.length + self.f2_power) * math.cos(self.an),
+                                                      450 + self.width / 2 * math.cos(self.an) - (self.length + self.f2_power) * math.sin(self.an)),
+                                                      (20 - self.width / 2 * math.sin(self.an) + (self.length + self.f2_power) * math.cos(self.an),
+                                                      450 - self.width / 2 * math.cos(self.an) - (self.length + self.f2_power) * math.sin(self.an))))
 
     def power_up(self):
         if self.f2_on:
@@ -134,18 +129,16 @@ class Gun:
 
 
 class Target:
+    # self.points = 0
+    # self.live = 1
     # FIXME: don't work!!! How to call this functions when object is created?
     # self.new_target()
-    def __init__(self, screen: pygame.Surface):
-        self.screen = screen
-        self.points = 0
-        self.live = 1
 
     def new_target(self):
         """ Инициализация новой цели. """
-        x = self.x = random.randint(600, 780)
-        y = self.y = random.randint(300, 480)
-        r = self.r = random.randint(2, 50)
+        x = self.x = rnd(600, 780)
+        y = self.y = rnd(300, 550)
+        r = self.r = rnd(2, 50)
         color = self.color = RED
 
     def hit(self, points=1):
@@ -153,12 +146,7 @@ class Target:
         self.points += points
 
     def draw(self):
-        pygame.draw.circle(
-            self.screen,
-            self.color,
-            (self.x, self.y),
-            self.r
-        )
+        ...
 
 
 pygame.init()
@@ -168,24 +156,15 @@ balls = []
 
 clock = pygame.time.Clock()
 gun = Gun(screen)
-target1 = Target(screen)
-target2 = Target(screen)
-target1.new_target()
-target2.new_target()
+target = Target()
 finished = False
-
-FONT = pygame.font.Font(None, 50)
 
 while not finished:
     screen.fill(WHITE)
     gun.draw()
-    target1.draw()
-    target2.draw()
+    target.draw()
     for b in balls:
         b.draw()
-
-    score_display = FONT.render(str(target1.points + target2.points), True, (0, 0, 0))
-    screen.blit(score_display, (10, 10))
     pygame.display.update()
 
     clock.tick(FPS)
@@ -201,11 +180,10 @@ while not finished:
 
     for b in balls:
         b.move()
-        for target in target1, target2:
-            if b.hittest(target) and target.live:
-                #target.live = 0
-                target.hit()
-                target.new_target()
+        if b.hittest(target) and target.live:
+            target.live = 0
+            target.hit()
+            target.new_target()
     gun.power_up()
 
 pygame.quit()
