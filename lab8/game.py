@@ -36,7 +36,6 @@ class Ball:
         self.vx = 0
         self.vy = 0
         self.color = random.choice(GAME_COLORS)
-        self.live = 30
 
     def move(self):
         """Переместить мяч по прошествии единицы времени.
@@ -66,6 +65,60 @@ class Ball:
         Returns:
             Возвращает True в случае столкновения мяча и цели. В противном случае возвращает False.
         """
+        if (self.x - obj.x) ** 2 + (self.y - obj.y) ** 2 <= (self.r + obj.r) ** 2:
+            return True
+        return False
+
+class Triangle:
+    def __init__(self):
+        self.x = 0
+        self.y = 0        
+        self.vx = 0
+        self.vy = 0
+        self.color = BLACK
+        self.a = 26
+        self.b = 20
+        self.incline = math.asin((self.b / 2) / (self.a))
+        self.an = 0
+        self.hit = 0
+        self.time = 0
+
+    def move(self):
+        if self.hit == 0:           
+            dt = 3 / FPS
+            self.vy = self.vy + 136*dt
+            self.x += self.vx * dt
+            self.y += self.vy * dt
+            self.time += dt
+            if self.y >= (HEIGHT - 100):
+                self.hit = 1
+
+    def draw(self):
+        if self.vx > 0:
+            self.an = math.atan((self.vy) / (self.vx))
+        elif self.vx < 0:
+            self.an = math.pi + math.atan((self.vy) / (self.vx))
+        else:
+            if self.vy >= 0:
+                self.an = math.pi / 2
+            else:
+                self.an = -math.pi / 2
+                
+        polygon(screen, self.color, ((self.x, self.y),
+                                     (self.x - self.a * math.cos(self.incline + self.an),
+                                      self.y + self.a * math.sin(self.incline + self.an)),
+                                     (self.x - self.a * math.cos(self.incline - self.an),
+                                      self.y + self.a * math.sin(self.incline - self.an))))
+        
+        polygon(screen, (255, 0, 0), ((self.x, self.y),
+                                      (self.x - self.a * math.cos(self.incline + self.an),
+                                       self.y + self.a * math.sin(self.incline + self.an)),
+                                      (self.x - self.a * math.cos(self.incline - self.an),
+                                       self.y + self.a * math.sin(self.incline - self.an)),
+                                      (self.x, self.y)), 2)
+ 
+
+    def hittest(self, obj):
         if (self.x - obj.x) ** 2 + (self.y - obj.y) ** 2 <= (self.r + obj.r) ** 2:
             return True
         return False
@@ -102,6 +155,16 @@ class Gun:
         new_ball.vx = self.f2_power * math.cos(self.an)
         new_ball.vy = - self.f2_power * math.sin(self.an)
         balls.append(new_ball)
+        self.f2_on = 0
+        self.f2_power = 10
+
+    def fire2_end(self, event):
+        new_triangle = Triangle()
+        new_triangle.x = self.x
+        new_triangle.y = self.y + HEIGHT - 600
+        new_triangle.vx = self.f2_power * math.cos(self.an) * 4
+        new_triangle.vy = - self.f2_power * math.sin(self.an) * 4
+        triangles.append(new_triangle)
         self.f2_on = 0
         self.f2_power = 10
 
@@ -164,15 +227,14 @@ class Target:
     # self.new_target()
     def __init__(self):
         self.points = 0
-        self.live = 1
         self.vx = 5
         self.vy = 5
 
     def new_target(self):
         """ Инициализация новой цели. """
-        x = self.x = random.randint(600, 750)
-        y = self.y = random.randint(200, 450)
-        r = self.r = random.randint(2, 50)
+        r = self.r = random.randint(20, 50)
+        x = self.x = random.randint(2 * self.r, WIDTH - 2 * self.r)
+        y = self.y = random.randint(2 * self.r, 300)
         color = self.color = RED
 
     def hit(self, points=1):
@@ -185,9 +247,9 @@ class Target:
     def move(self):
         self.x += self.vx
         self.y += self.vy
-        if self.x >= WIDTH - self.r or self.x <= self.r:
+        if self.x + self.r >= WIDTH or self.x <= self.r:
             self.vx *= -1
-        if self.y >= HEIGHT - self.r or self.y <= self.r:
+        if self.y + self.r >= HEIGHT - 100 or self.y <= self.r:
             self.vy *= -1
 
 
@@ -196,6 +258,7 @@ global screen
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 bullet = 0
 balls = []
+triangles = []
 
 clock = pygame.time.Clock()
 gun = Gun()
@@ -211,16 +274,12 @@ while not finished:
     screen.fill(WHITE)
     rect(screen, (0, 102, 0), (0, HEIGHT - 100, WIDTH, 100))
 
-
     gun.draw()
     target1.draw()
     target2.draw()
-    for b in balls:
-        b.draw()
 
     score_display = FONT.render(str(target1.points + target2.points), True, (0, 0, 0))
     screen.blit(score_display, (10, 10))
-    pygame.display.update()
 
     clock.tick(FPS)
     for event in pygame.event.get():
@@ -231,6 +290,8 @@ while not finished:
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
                 gun.fire1_end(event)
+            if event.button == 3:
+                gun.fire2_end(event)
         elif event.type == pygame.MOUSEMOTION:
             gun.targetting(event)
 
@@ -241,11 +302,16 @@ while not finished:
     target2.move()
     for b in balls:
         b.move()
+        b.draw()
         for target in target1, target2:
-            if b.hittest(target) and target.live:
-                #target.live = 0
+            if b.hittest(target):
                 target.hit()
                 target.new_target()
+
+    for t in triangles:
+        t.move()
+        t.draw()
+    pygame.display.update()
     gun.power_up()
 
 pygame.quit()
