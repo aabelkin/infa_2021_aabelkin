@@ -252,6 +252,86 @@ class Target:
         if self.y + self.r >= HEIGHT - 100 or self.y <= self.r:
             self.vy *= -1
 
+class Plane:
+    def __init__(self):
+        self.time = 0
+        self.color = (128, 128, 128)
+        self.r = 40
+        self.y = 50
+        self.x = random.randint(10 + self.r, WIDTH - 200 - self.r)
+        self.v = random.randint(-50, 50)
+
+    def draw(self):
+        pygame.draw.circle(screen, self.color, (self.x, self.y), self.r)
+        pygame.draw.circle(screen, BLACK, (self.x, self.y), self.r, 2)
+
+    def move(self):
+        dt = 5 / FPS
+        self.time += dt
+        self.x += self.v * dt
+        if (self.x <= self.r) or (self.x + self.r >= WIDTH):
+            self.v = -self.v
+
+        if self.time >= 10:
+            new_bomb = Bomb()
+            new_bomb.x = self.x
+            new_bomb.y = self.y + self.r
+            new_bomb.vx = self.v
+            bombs.append(new_bomb)
+            self.time = 0
+
+    def create_plane(self):
+        self.time = 0
+        self.x = random.randint(282 + self.r, WIDTH - 152 - self.r)
+        self.v = random.randint(-100, 100)
+        if self.v == 0:
+            self.v = 100
+
+class Bomb:
+    def __init__(self):
+        self.x = 100
+        self.y = 80
+        self.r = 5
+        self.color = BLACK
+        self.vx = 0
+        self.vy = 50
+
+    def draw(self):
+        pygame.draw.circle(self.screen, self.color, (self.x, self.y), self.r)
+
+    def move(self):
+        dt = 5 / FPS
+        self.y += self.vy * dt
+        self.x += self.vx * dt
+
+        if (self.x >= WIDTH - self.r) or (self.x <= self.r):
+            self.vx = -self.vx
+
+    def hit(self, obj):
+        if (self.x - obj.x) ** 2 + (self.y - obj.y) ** 2 <= (self.r + obj.r) ** 2:
+            return True
+        return False
+
+    def clash(self):
+        new_bang = Bang(self.x, self.y)
+        bangs.append(new_bang)
+        bombs.remove(self)
+
+class Bang:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.r = 30
+        self.color = (255, 128, 0)
+        self.time = 0
+
+    def draw(self):
+        dt = 10 / FPS
+        if self.time <= 1:
+            circle(screen, self.color, (self.x, self.y), self.r * self.time)
+            self.time += dt
+        else:
+            bangs.remove(self)
 
 pygame.init()
 global screen
@@ -259,6 +339,8 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 bullet = 0
 balls = []
 triangles = []
+planes = []
+bombs = []
 
 clock = pygame.time.Clock()
 gun = Gun()
@@ -269,6 +351,12 @@ target2.new_target()
 finished = False
 
 FONT = pygame.font.Font(None, 50)
+
+new_plane_1 = Plane()
+new_plane_1.y = 160
+new_plane_2 = Plane()
+new_plane_2.y = 270
+planes += [new_plane_1] + [new_plane_2]
 
 while not finished:
     screen.fill(WHITE)
@@ -311,6 +399,9 @@ while not finished:
     for t in triangles:
         t.move()
         t.draw()
+    for p in planes:
+        p.move()
+        p.draw()
     pygame.display.update()
     gun.power_up()
 
