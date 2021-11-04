@@ -1,75 +1,26 @@
 import math
-import random
-
+from random import randint
 import pygame
 from pygame.draw import *
 
+FPS = 100
 
-FPS = 30
-
-RED = 0xFF0000
-BLUE = 0x0000FF
-YELLOW = 0xFFC91F
-GREEN = 0x00FF00
-MAGENTA = 0xFF03B8
-CYAN = 0x00FFCC
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+YELLOW = (255, 255, 0)
+GREEN = (0, 255, 0)
+MAGENTA = (255, 0, 255)
+CYAN = (0, 255, 255)
 BLACK = (0, 0, 0)
-WHITE = 0xFFFFFF
-GREY = 0x7D7D7D
-GAME_COLORS = [RED, BLUE, YELLOW, GREEN, MAGENTA, CYAN]
+WHITE = (255, 255, 255)
+GREY = (192, 192, 192)
+GAME_COLORS = [BLUE, YELLOW, GREEN, MAGENTA, CYAN]
 
-WIDTH = 800
-HEIGHT = 600
-
-
-class Ball:
-    def __init__(self, x, y):
-        """ Конструктор класса ball
-
-        Args:
-        x - начальное положение мяча по горизонтали
-        y - начальное положение мяча по вертикали
-        """
-        self.x = x
-        self.y = y
-        self.r = 5
-        self.vx = 0
-        self.vy = 0
-        self.color = random.choice(GAME_COLORS)
-
-    def move(self):
-        """Переместить мяч по прошествии единицы времени.
-
-        Метод описывает перемещение мяча за один кадр перерисовки. То есть, обновляет значения
-        self.x и self.y с учетом скоростей self.vx и self.vy, силы гравитации, действующей на мяч,
-        и стен по краям окна (размер окна 800х600).
-        """
-        # FIXME
-        self.x += self.vx
-        self.y -= self.vy
-        self.vy -= 1
-        if self.x + self.r >= WIDTH or self.x - self.r <= 0:
-            self.vx *= -1
-        if self.y + self.r >= HEIGHT - 100 or self.y - self.r <= 0:
-            self.vy *= -1
-            
-
-    def draw(self):
-        circle(screen, self.color, (self.x, self.y), self.r)
-
-    def hittest(self, obj):
-        """Функция проверяет сталкивалкивается ли данный обьект с целью, описываемой в обьекте obj.
-
-        Args:
-            obj: Обьект, с которым проверяется столкновение.
-        Returns:
-            Возвращает True в случае столкновения мяча и цели. В противном случае возвращает False.
-        """
-        if (self.x - obj.x) ** 2 + (self.y - obj.y) ** 2 <= (self.r + obj.r) ** 2:
-            return True
-        return False
+WIDTH = 1200
+HEIGHT = 800
 
 class Triangle:
+    """ Снаряд 2 вида - треугольник. """
     def __init__(self):
         self.x = 0
         self.y = 0        
@@ -79,16 +30,16 @@ class Triangle:
         self.a = 26
         self.b = 20
         self.incline = math.asin((self.b / 2) / (self.a))
+        self.time = 0
         self.an = 0
         self.hit = 0
-        self.time = 0
 
     def move(self):
         if self.hit == 0:           
             dt = 3 / FPS
             self.vy = self.vy + 136*dt
             self.x += self.vx * dt
-            self.y += self.vy * dt
+            self.y += self.vy * dt 
             self.time += dt
             if self.y >= (HEIGHT - 100):
                 self.hit = 1
@@ -102,90 +53,155 @@ class Triangle:
             if self.vy >= 0:
                 self.an = math.pi / 2
             else:
-                self.an = -math.pi / 2
+                self.an =  -math.pi / 2
                 
         polygon(screen, self.color, ((self.x, self.y),
                                      (self.x - self.a * math.cos(self.incline + self.an),
                                       self.y + self.a * math.sin(self.incline + self.an)),
                                      (self.x - self.a * math.cos(self.incline - self.an),
-                                      self.y + self.a * math.sin(self.incline - self.an))))
+                                      self.y + self.a * math.sin(self.incline - self.an)),
+                                     (self.x, self.y)))
         
-        polygon(screen, (255, 0, 0), ((self.x, self.y),
-                                      (self.x - self.a * math.cos(self.incline + self.an),
-                                       self.y + self.a * math.sin(self.incline + self.an)),
-                                      (self.x - self.a * math.cos(self.incline - self.an),
-                                       self.y + self.a * math.sin(self.incline - self.an)),
-                                      (self.x, self.y)), 2)
- 
+        polygon(screen, (255, 0, 0), [(self.x, self.y), (self.x - self.a * math.cos(self.incline + self.an), self.y + self.a * math.sin(self.incline + self.an)),
+                                           (self.x - self.a * math.cos(self.incline - self.an), self.y + self.a * math.sin(self.incline - self.an)), (self.x, self.y)], 2)
 
     def hittest(self, obj):
-        if (self.x - obj.x) ** 2 + (self.y - obj.y) ** 2 <= (self.r + obj.r) ** 2:
+        if (obj.r)**2 >= ((self.x - obj.x)**2 + (self.y - obj.y)**2):
             return True
+        
+        else:
+            return False
+
+
+class Buckshot:
+    """ Развыв снаряда 1 вида на более мелкие снаряды. """
+    def __init__(self):
+        self.hit = 0
+        self.x = []
+        self.y = []
+        self.r = 4
+        self.color = GAME_COLORS[randint(0, 4)]
+        self.v = 15
+        self.vx = []
+        self.vy = []
+        self.n = 8
+        for i in range(0, self.n):
+            self.vx += [self.v * math.cos(2 * math.pi * i/ self.n)]
+            self.vy += [self.v * math.sin(2 * math.pi * i/ self.n)]
+        self.time = 0
+
+    def move(self):
+        dt = 3 / FPS
+        for i in range(0, self.n):
+            self.vy[i] = self.vy[i] + 100*dt
+            self.x[i] += self.vx[i] * dt
+            self.y[i] += self.vy[i] * dt 
+            if (self.x[i] + self.r >= WIDTH) or (self.x[i] - self.r <= 0):
+                self.vx[i] = - self.vx[i]
+            if (self.y[i] + self.r >= (HEIGHT - 100)) and (self.vy[i] >= 0):
+                self.vy[i] = - self.vy[i]
+        self.time += dt
+
+    def draw(self):
+        for i in range (0, self.n):
+            circle(screen, self.color, (self.x[i], self.y[i]), self.r)
+
+    def hittest(self, obj):
+        for i in range(0, self.n):
+            if (self.r + obj.r) ** 2 >= (self.x[i] - obj.x) ** 2 + (self.y[i] - obj.y) ** 2:
+                self.hit = 1
+        if self.hit == 1:
+            self.hit = 0
+            return True       
         return False
 
 
+class Ball:
+    """ Сраняд 1 вида - шарик. """
+    def __init__(self):
+        self.x = 40
+        self.y = 450
+        self.r = 10
+        self.vx = 0
+        self.vy = 0
+        self.color = GAME_COLORS[randint(0, 4)]
+        self.time = 0
+
+    def move(self):
+        dt = 3 / FPS
+        self.vy = self.vy + 136*dt
+        self.x += self.vx * dt
+        self.y += self.vy * dt 
+        self.time += dt
+        if (self.x + self.r >= WIDTH) or (self.x - self.r <= 0):
+            self.vx = - self.vx
+        if (self.y + self.r >= (HEIGHT - 100)) and (self.vy >= 0):
+            self.vy = - self.vy
+
+        if self.time >= 3:
+            new_buckshot = Buckshot()
+            for i in range (0, new_buckshot.n):               
+                new_buckshot.x += [self.x]
+                new_buckshot.y += [self.y]
+            buckshots.append(new_buckshot)
+            balls.remove(self)
+
+    def draw(self):
+        pygame.draw.circle(screen, self.color, (self.x, self.y), self.r)
+
+    def hittest(self, obj):
+        if (self.r + obj.r)**2 >= (self.x - obj.x)**2 + (self.y - obj.y)**2:
+            return True       
+        else:
+            return False
+
+
 class Gun:
+    """ Танк с пушкой. """
     def __init__(self):
         self.f2_power = 10
         self.f2_on = 0
-        self.an = 1
+        self.angle = 1
         self.color = GREY
-        self.length = 40
-        self.width = 10
         self.x = WIDTH / 2
         self.y = 390
+        self.v = 3
         self.r = 60
         self.go = 0
-        self.v = 3
-
-    def fire1_start(self, event):
-        self.f2_on = 1
-
-    def fire1_end(self, event):
-        """Выстрел мячом.5
-
-        Происходит при отпускании кнопки мыши.
-        Начальные значения компонент скорости мяча vx и vy зависят от положения мыши.
-        """
-        global balls, bullet
-        bullet += 1
-        new_ball = Ball(self.x, self.y)
-        new_ball.r += 5
-        self.an = math.atan2((event.pos[1]-new_ball.y), (event.pos[0]-new_ball.x))
-        new_ball.vx = self.f2_power * math.cos(self.an)
-        new_ball.vy = - self.f2_power * math.sin(self.an)
-        balls.append(new_ball)
-        self.f2_on = 0
-        self.f2_power = 10
-
-    def fire2_end(self, event):
-        new_triangle = Triangle()
-        new_triangle.x = self.x
-        new_triangle.y = self.y + HEIGHT - 600
-        new_triangle.vx = self.f2_power * math.cos(self.an) * 4
-        new_triangle.vy = - self.f2_power * math.sin(self.an) * 4
-        triangles.append(new_triangle)
-        self.f2_on = 0
-        self.f2_power = 10
 
     def targetting(self, event):
-        """Прицеливание. Зависит от положения мыши."""
         if event.pos[0] - self.x > 0:
-            self.an = math.atan((self.y - event.pos[1]) / (event.pos[0] - self.x))
+            self.angle = math.atan((self.y - event.pos[1]) / (event.pos[0] - self.x))
         elif event.pos[0] - self.x < 0:
-            self.an = math.pi + math.atan((self.y - event.pos[1]) / (event.pos[0] - self.x))
+            self.angle = math.pi + math.atan((self.y - event.pos[1]) / (event.pos[0] - self.x))
         else:
             if self.y - event.pos[1] >= 0:
-                self.an = math.pi / 2
+                self.angle = math.pi / 2
             else:
-                self.an = -math.pi / 2
+                self.angle =  - math.pi / 2
         if self.f2_on:
             self.color = RED
         else:
             self.color = GREY
 
+    def move_start(self, event):
+        if event.key == pygame.K_a:
+            self.go = -1
+        if event.key == pygame.K_d:
+            self.go = 1
+    
+    def move(self, keys):
+        if keys[pygame.K_a]:
+            self.go = -1
+        if keys[pygame.K_d]:
+            self.go = 1
+        self.x += self.go * self.v
+
+    def move_end(self, event):
+        if (event.key == pygame.K_a) or (event.key == pygame.K_d):
+            self.go = 0 
+
     def draw(self):
-        # FIXIT don't know how to do it
         circle(screen, GREEN, (self.x, self.y + 40 + HEIGHT - 600), self.r)
         circle(screen, BLACK, (self.x, self.y + 40 + HEIGHT - 600), self.r, 1)
         rect(screen, GREEN, (self.x - 70, self.y + 40 + HEIGHT - 600, 140, self.r))
@@ -194,17 +210,15 @@ class Gun:
         circle(screen, BLACK, (self.x - 50, self.y + 80 + HEIGHT - 600), 30, 1)
         circle(screen, (190, 190, 190), (self.x + 50, self.y + 80 + HEIGHT - 600), 30)
         circle(screen, BLACK, (self.x + 50, self.y + 80 + HEIGHT - 600), 30, 1)
-        a = self.length + self.f2_power
-        b = self.width / 2
-        polygon(screen, self.color, ((self.x - b * math.sin(self.an),
-                                                      self.y - b * math.cos(self.an)),
-                                                      (self.x + b * math.sin(self.an),
-                                                      self.y + b * math.cos(self.an)),
-                                                      (self.x + b * math.sin(self.an) + a * math.cos(self.an),
-                                                      self.y + b * math.cos(self.an) - a * math.sin(self.an)),
-                                                      (self.x - b * math.sin(self.an) + a * math.cos(self.an),
-                                                      self.y - b * math.cos(self.an) - a * math.sin(self.an))))
-        
+        polygon(screen, self. color, [(self.x, self.y + HEIGHT - 600), (self.x + self.f2_power * math.cos(self.angle), self.y - self.f2_power * math.sin(self.angle) + HEIGHT - 600),
+                                           (self.x + self.f2_power * math.cos(self.angle) - 5 * math.sin(self.angle), self.y  + HEIGHT - 600 - self.f2_power * math.sin(self.angle) - 5 * math.cos(self.angle)),
+                                           (self.x - 5 * math.sin(self.angle), self.y - 5 * math.cos(self.angle) + HEIGHT - 600), (self.x, self.y + HEIGHT - 600)])
+        polygon(screen, BLACK, [(self.x, self.y + HEIGHT - 600), (self.x + self.f2_power * math.cos(self.angle), self.y - self.f2_power * math.sin(self.angle) + HEIGHT - 600),
+                                           (self.x + self.f2_power * math.cos(self.angle) - 5 * math.sin(self.angle), self.y  + HEIGHT - 600 - self.f2_power * math.sin(self.angle) - 5 * math.cos(self.angle)),
+                                           (self.x - 5 * math.sin(self.angle), self.y - 5 * math.cos(self.angle) + HEIGHT - 600), (self.x, self.y + HEIGHT - 600)], 2)
+
+    def fire1_start(self, event):
+        self.f2_on = 1
 
     def power_up(self):
         if self.f2_on:
@@ -214,52 +228,67 @@ class Gun:
         else:
             self.color = GREY
 
-    def move(self, keys):
-        if keys[pygame.K_a]:
-            self.go = -1
-        if keys[pygame.K_d]:
-            self.go = 1
-        self.x += self.go * self.v
+    def fire1_end(self, event):
+        global balls, bullet
+        bullet += 1
+        new_ball = Ball()
+        new_ball.x = self.x
+        new_ball.y = self.y  + HEIGHT - 600
+        new_ball.vx = self.f2_power * math.cos(self.angle) * 4
+        new_ball.vy = - self.f2_power * math.sin(self.angle) * 4
+        balls.append(new_ball)
+        self.f2_on = 0
+        self.f2_power = 10
+        
+    def fire2_end(self, event):
+        new_triangle = Triangle()
+        new_triangle.x = self.x
+        new_triangle.y = self.y + HEIGHT - 600
+        new_triangle.vx = self.f2_power * math.cos(self.angle) * 4
+        new_triangle.vy = - self.f2_power * math.sin(self.angle) * 4
+        triangles.append(new_triangle)
+        self.f2_on = 0
+        self.f2_power = 10        
 
 
-class Target:
-    # FIXME: don't work!!! How to call this functions when object is created?
-    # self.new_target()
+class Helicopter:
+    """ Цели 1 вида - красные шары по бокам. """
     def __init__(self):
-        self.points = 0
-        self.vx = 5
-        self.vy = 5
-
-    def new_target(self):
-        """ Инициализация новой цели. """
-        r = self.r = random.randint(20, 50)
-        x = self.x = random.randint(2 * self.r, WIDTH - 2 * self.r)
-        y = self.y = random.randint(2 * self.r, 300)
-        color = self.color = RED
-
-    def hit(self, points=1):
-        """Попадание шарика в цель."""
-        self.points += points
+        self.r = 50
+        self.x = 100
+        self.y = randint(141 + self.r, HEIGHT - 101 - self.r - 160)
+        self.v = randint(-100, 100)
+        if abs(self.v) < 40:
+            self.v = 100 - abs(self.v)
+        self.color = RED
 
     def draw(self):
-        circle(screen, self.color, (self.x, self.y), self.r)
+        pygame.draw.circle(screen, self.color, (self.x, self.y), self.r)
 
     def move(self):
-        self.x += self.vx
-        self.y += self.vy
-        if self.x + self.r >= WIDTH or self.x <= self.r:
-            self.vx *= -1
-        if self.y + self.r >= HEIGHT - 100 or self.y <= self.r:
-            self.vy *= -1
+        dt = 5 / FPS
+        self.y += self.v * dt
+        if (self.y - self.r <= 140) or (self.y + self.r >= HEIGHT - 100 - 160):
+            self.v = -self.v       
+
+    def create_helicopter(self):
+        self.y = randint(141 + self.r, HEIGHT - 101 - self.r - 160)
+        self.v = randint(-100, 100)
+        if abs(self.v) < 40:
+            self.v = 100 - abs(self.v)
+
 
 class Plane:
+    """ Цели 2 вида - шары, летающие сверху по горизонтали. """
     def __init__(self):
         self.time = 0
         self.color = (128, 128, 128)
         self.r = 40
         self.y = 50
-        self.x = random.randint(10 + self.r, WIDTH - 200 - self.r)
-        self.v = random.randint(-50, 50)
+        self.x = randint(282 + self.r, WIDTH - 152 - self.r)
+        self.v = randint(-100, 100)
+        if self.v == 0:
+            self.v = 100
 
     def draw(self):
         pygame.draw.circle(screen, self.color, (self.x, self.y), self.r)
@@ -269,7 +298,7 @@ class Plane:
         dt = 5 / FPS
         self.time += dt
         self.x += self.v * dt
-        if (self.x <= self.r) or (self.x + self.r >= WIDTH):
+        if (self.x - self.r - 281 <= 0) or (self.x + self.r >= WIDTH - 151):
             self.v = -self.v
 
         if self.time >= 10:
@@ -282,12 +311,43 @@ class Plane:
 
     def create_plane(self):
         self.time = 0
-        self.x = random.randint(282 + self.r, WIDTH - 152 - self.r)
-        self.v = random.randint(-100, 100)
+        self.x = randint(282 + self.r, WIDTH - 152 - self.r)
+        self.v = randint(-100, 100)
         if self.v == 0:
-            self.v = 100
+            self.v = 100      
 
+class Airship:
+    """ Аэростат - верхний шарик. Он может стрелять в танк. """ 
+    def __init__(self):
+        self.r = 30
+        self.time = 0
+        self.color = (192, 192, 192)
+        self.y = 60
+        self.x = WIDTH - 152 - self.r
+        self.v = -90
+
+    def move(self):
+        dt = 5 / FPS
+        self.time += dt
+        self.x += self.v * dt
+        if (self.x - self.r - 281 <= 0) or (self.x + self.r >= WIDTH - 151):
+            self.v = -self.v
+
+    def draw(self):
+        pygame.draw.circle(screen, self.color, (self.x, self.y), self.r)
+        pygame.draw.circle(screen, BLACK, (self.x, self.y), self.r, 2)
+            
+    def fire(self, event):
+        if (event.key == pygame.K_SPACE) and (self.time >= 7):
+            new_bomb = Bomb()
+            new_bomb.x = self.x
+            new_bomb.y = self.y + self.r
+            new_bomb.vx = self.v
+            bombs.append(new_bomb)
+            self.time = 0
+    
 class Bomb:
+    """ Бомбочки, сбрасываемые аэростатом и целями 2 вида. """
     def __init__(self):
         self.x = 100
         self.y = 80
@@ -297,7 +357,7 @@ class Bomb:
         self.vy = 50
 
     def draw(self):
-        pygame.draw.circle(self.screen, self.color, (self.x, self.y), self.r)
+        pygame.draw.circle(screen, self.color, (self.x, self.y), self.r)
 
     def move(self):
         dt = 5 / FPS
@@ -308,19 +368,23 @@ class Bomb:
             self.vx = -self.vx
 
     def hit(self, obj):
-        if (self.x - obj.x) ** 2 + (self.y - obj.y) ** 2 <= (self.r + obj.r) ** 2:
+        if (self.r + obj.r) ** 2 >= (self.x - obj.x) ** 2 + (-self.y + 40 + HEIGHT - 600 + obj.y ) ** 2:
             return True
-        return False
+        else:
+            return False
 
     def clash(self):
-        new_bang = Bang(self.x, self.y)
+        new_bang = Bang()
+        new_bang.x = self.x
+        new_bang.y = self.y
         bangs.append(new_bang)
         bombs.remove(self)
-
+            
 class Bang:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
+    """ Взрыв бомбочки при касании с землей. """
+    def __init__(self):
+        self.x = 0
+        self.y = 0
         self.r = 30
         self.color = (255, 128, 0)
         self.time = 0
@@ -334,75 +398,190 @@ class Bang:
             bangs.remove(self)
 
 pygame.init()
+f1 = pygame.font.Font(None, 140)
+f2 = pygame.font.Font(None, 40)
+f3 = pygame.font.Font(None, 100)
 global screen
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-bullet = 0
-balls = []
-triangles = []
-planes = []
-bombs = []
+
+health_tank = 2
+health_airship = 2
 
 clock = pygame.time.Clock()
-gun = Gun()
-target1 = Target()
-target2 = Target()
-target1.new_target()
-target2.new_target()
-finished = False
 
-FONT = pygame.font.Font(None, 50)
+bullet = 0
+points = 0
+balls = []
+triangles = []
+helicopters = []
+planes = []
+bombs = []
+buckshots = []
+bangs = []
+  
+new_helicopter_1 = Helicopter()
+new_helicopter_1.x = 100
+new_helicopter_2 = Helicopter()
+new_helicopter_2.x = WIDTH - 100
+helicopters += [new_helicopter_1] + [new_helicopter_2]
+
+gun = Gun()
+airship = Airship()
 
 new_plane_1 = Plane()
 new_plane_1.y = 160
 new_plane_2 = Plane()
 new_plane_2.y = 270
 planes += [new_plane_1] + [new_plane_2]
+    
+finished = False
 
 while not finished:
-    screen.fill(WHITE)
-    rect(screen, (0, 102, 0), (0, HEIGHT - 100, WIDTH, 100))
+    screen.fill((204, 255, 255))
+    rect(screen, (102, 51, 0), (0, HEIGHT - 100, WIDTH, 100))
+    rect(screen, (0, 102, 0), (0, HEIGHT - 100, WIDTH, 40))
+    rect(screen, (0, 0, 0), (-10, HEIGHT - 100, WIDTH + 10, 40), 3)
+    text1 = f1.render(str(health_tank), True,
+                    (100, 0, 0))
+    screen.blit(text1, (80, 40))
+    text2 = f1.render(str(health_airship), True,
+                    (100, 0, 0))
+    screen.blit(text2, (WIDTH - 210, 40))
+    
+    text3 = f2.render('Здоровье танка' , True,
+                  (100, 0, 0))
+    screen.blit(text3, (15, 5))
+
+    text4 = f2.render('Здоровье аэростата', True,
+                  (100, 0, 0))
+    screen.blit(text4, (WIDTH - 290, 5))
 
     gun.draw()
-    target1.draw()
-    target2.draw()
 
-    score_display = FONT.render(str(target1.points + target2.points), True, (0, 0, 0))
-    screen.blit(score_display, (10, 10))
+    airship.move()
+    airship.draw()
+    
+    for h in helicopters:
+        h.move()
+        h.draw()
+
+    for p in planes:
+        p.move()
+        p.draw()
+
+    for b in balls:
+        b.move()
+        b.draw()
+
+    for t in triangles:
+        t.move()
+        t.draw()
+
+    for bm in bombs:
+        bm.move()
+        if bm.hit(gun):
+            bm.clash()
+            health_tank = health_tank - 1
+        if (bm.y >= (HEIGHT - 100)):
+            bm.clash()
+        bm.draw()
+
+    for bg in bangs:
+        bg.draw()
+
+    for bs in buckshots:
+        bs.move()
+        bs.draw()
+
+    pygame.display.update()
+        
 
     clock.tick(FPS)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             finished = True
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            gun.fire1_start(event)
-        elif event.type == pygame.MOUSEBUTTONUP:
-            if event.button == 1:
-                gun.fire1_end(event)
-            if event.button == 3:
-                gun.fire2_end(event)
-        elif event.type == pygame.MOUSEMOTION:
-            gun.targetting(event)
+        else:
+            if event.type == pygame.KEYUP:
+               gun.move_end(event)
+            if event.type == pygame.MOUSEMOTION:
+                gun.targetting(event)
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                gun.fire1_start(event)
+            if event.type == pygame.KEYDOWN:              
+                airship.fire(event)
+            if event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:
+                    gun.fire1_end(event)
+                if event.button == 3:
+                    gun.fire2_end(event)
 
     keys = pygame.key.get_pressed()
     gun.move(keys)
 
-    target1.move()
-    target2.move()
-    for b in balls:
-        b.move()
-        b.draw()
-        for target in target1, target2:
-            if b.hittest(target):
-                target.hit()
-                target.new_target()
-
     for t in triangles:
-        t.move()
-        t.draw()
-    for p in planes:
-        p.move()
-        p.draw()
-    pygame.display.update()
+        for h in helicopters:
+            if t.hittest(h):
+                h.create_helicopter()
+                triangles.remove(t)
+        for p in planes:
+            if t.hittest(p):
+                p.create_plane()
+                triangles.remove(t)
+        if t.hittest(airship):
+            health_airship = health_airship - 1
+            triangles.remove(t)
+            
+    for b in balls:
+        for h in helicopters:           
+            if b.hittest(h):
+                h.create_helicopter()
+                balls.remove(b)
+        for p in planes:
+            if b.hittest(p):
+                p.create_plane()
+                balls.remove(b)
+        if b.hittest(airship):
+            health_airship = health_airship - 1
+            balls.remove(b)
+            
+    for bs in buckshots:
+        for h in helicopters:
+            if bs.hittest(h):
+                h.create_helicopter()
+        for p in planes:
+            if bs.hittest(p):
+                p.create_plane()
+        if bs.hittest(airship):
+            health_airship = health_airship - 1
+            buckshots.remove(bs)
+            
+        if bs.time >= 3:
+            buckshots.remove(bs)
+
     gun.power_up()
+
+    if (health_tank <= 0) or (health_airship <= 0):
+        finished = True
+
+finished = False
+
+while not finished:
+    screen.fill(BLACK)
+    text5 = f3.render('ПОБЕДИТЕЛЬ' , True,
+                  (255, 255, 255))
+    screen.blit(text5, (350, 300))
+
+    if health_tank <= 0:
+        text6 = f3.render('АЭРОСТАТ' , True,
+                      (255, 255, 255))
+        screen.blit(text6, (400, 400))
+    elif health_airship <= 0:
+        text6 = f3.render('ТАНК' , True,
+                      (255, 255, 255))
+        screen.blit(text6, (490, 400))
+    pygame.display.update()
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            finished = True
 
 pygame.quit()
