@@ -2,6 +2,7 @@ import math
 import random
 
 import pygame
+from pygame.draw import *
 
 
 FPS = 30
@@ -22,7 +23,7 @@ HEIGHT = 600
 
 
 class Ball:
-    def __init__(self, x=40, y=450):
+    def __init__(self, x, y):
         """ Конструктор класса ball
 
         Args:
@@ -31,7 +32,7 @@ class Ball:
         """
         self.x = x
         self.y = y
-        self.r = 10
+        self.r = 5
         self.vx = 0
         self.vy = 0
         self.color = random.choice(GAME_COLORS)
@@ -48,14 +49,14 @@ class Ball:
         self.x += self.vx
         self.y -= self.vy
         self.vy -= 1
-        if self.x >= WIDTH - self.r:
+        if self.x + self.r >= WIDTH or self.x - self.r <= 0:
             self.vx *= -1
-        if self.y >= HEIGHT - self.r:
+        if self.y + self.r >= HEIGHT - 100 or self.y - self.r <= 0:
             self.vy *= -1
             
 
     def draw(self):
-        pygame.draw.circle(screen, self.color, (self.x, self.y), self.r)
+        circle(screen, self.color, (self.x, self.y), self.r)
 
     def hittest(self, obj):
         """Функция проверяет сталкивалкивается ли данный обьект с целью, описываемой в обьекте obj.
@@ -76,16 +77,18 @@ class Gun:
         self.f2_on = 0
         self.an = 1
         self.color = GREY
-        self.length = 30
+        self.length = 40
         self.width = 10
-        self.x = 300
-        self.y = 300
+        self.x = WIDTH / 2
+        self.y = 390
         self.r = 60
+        self.go = 0
+        self.v = 3
 
-    def fire2_start(self, event):
+    def fire1_start(self, event):
         self.f2_on = 1
 
-    def fire2_end(self, event):
+    def fire1_end(self, event):
         """Выстрел мячом.5
 
         Происходит при отпускании кнопки мыши.
@@ -93,7 +96,7 @@ class Gun:
         """
         global balls, bullet
         bullet += 1
-        new_ball = Ball()
+        new_ball = Ball(self.x, self.y)
         new_ball.r += 5
         self.an = math.atan2((event.pos[1]-new_ball.y), (event.pos[0]-new_ball.x))
         new_ball.vx = self.f2_power * math.cos(self.an)
@@ -120,17 +123,17 @@ class Gun:
 
     def draw(self):
         # FIXIT don't know how to do it
-        pygame.draw.circle(screen, GREEN, (self.x, self.y + 40 + HEIGHT - 600), self.r)
-        pygame.draw.circle(screen, BLACK, (self.x, self.y + 40 + HEIGHT - 600), self.r, 1)
-        pygame.draw.rect(screen, GREEN, (self.x - 70, self.y + 40 + HEIGHT - 600, 140, self.r))
-        pygame.draw.rect(screen, BLACK, (self.x - 70, self.y + 40 + HEIGHT - 600, 140, self.r), 1)
-        pygame.draw.circle(screen, (190, 190, 190), (self.x - 50, self.y + 80 + HEIGHT - 600), 30)
-        pygame.draw.circle(screen, BLACK, (self.x - 50, self.y + 80 + HEIGHT - 600), 30, 1)
-        pygame.draw.circle(screen, (190, 190, 190), (self.x + 50, self.y + 80 + HEIGHT - 600), 30)
-        pygame.draw.circle(screen, BLACK, (self.x + 50, self.y + 80 + HEIGHT - 600), 30, 1)
+        circle(screen, GREEN, (self.x, self.y + 40 + HEIGHT - 600), self.r)
+        circle(screen, BLACK, (self.x, self.y + 40 + HEIGHT - 600), self.r, 1)
+        rect(screen, GREEN, (self.x - 70, self.y + 40 + HEIGHT - 600, 140, self.r))
+        rect(screen, BLACK, (self.x - 70, self.y + 40 + HEIGHT - 600, 140, self.r), 1)
+        circle(screen, (190, 190, 190), (self.x - 50, self.y + 80 + HEIGHT - 600), 30)
+        circle(screen, BLACK, (self.x - 50, self.y + 80 + HEIGHT - 600), 30, 1)
+        circle(screen, (190, 190, 190), (self.x + 50, self.y + 80 + HEIGHT - 600), 30)
+        circle(screen, BLACK, (self.x + 50, self.y + 80 + HEIGHT - 600), 30, 1)
         a = self.length + self.f2_power
         b = self.width / 2
-        pygame.draw.polygon(screen, self.color, ((self.x - b * math.sin(self.an),
+        polygon(screen, self.color, ((self.x - b * math.sin(self.an),
                                                       self.y - b * math.cos(self.an)),
                                                       (self.x + b * math.sin(self.an),
                                                       self.y + b * math.cos(self.an)),
@@ -147,6 +150,13 @@ class Gun:
             self.color = RED
         else:
             self.color = GREY
+
+    def move(self, keys):
+        if keys[pygame.K_a]:
+            self.go = -1
+        if keys[pygame.K_d]:
+            self.go = 1
+        self.x += self.go * self.v
 
 
 class Target:
@@ -170,7 +180,7 @@ class Target:
         self.points += points
 
     def draw(self):
-        pygame.draw.circle(screen, self.color, (self.x, self.y), self.r)
+        circle(screen, self.color, (self.x, self.y), self.r)
 
     def move(self):
         self.x += self.vx
@@ -199,6 +209,9 @@ FONT = pygame.font.Font(None, 50)
 
 while not finished:
     screen.fill(WHITE)
+    rect(screen, (0, 102, 0), (0, HEIGHT - 100, WIDTH, 100))
+
+
     gun.draw()
     target1.draw()
     target2.draw()
@@ -214,11 +227,16 @@ while not finished:
         if event.type == pygame.QUIT:
             finished = True
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            gun.fire2_start(event)
+            gun.fire1_start(event)
         elif event.type == pygame.MOUSEBUTTONUP:
-            gun.fire2_end(event)
+            if event.button == 1:
+                gun.fire1_end(event)
         elif event.type == pygame.MOUSEMOTION:
             gun.targetting(event)
+
+    keys = pygame.key.get_pressed()
+    gun.move(keys)
+
     target1.move()
     target2.move()
     for b in balls:
